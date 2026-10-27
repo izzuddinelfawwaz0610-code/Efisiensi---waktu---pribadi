@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#176b45">
+<meta name="description" content="Dashboard pribadi untuk target ibadah, murajaah, durasi, dan pengingat.">
+<link rel="manifest" href="manifest.json">
+<title>Efisiensi Waktu Pribadi</title>
+<style>
+:root{--green:#176b45;--dark:#104d32;--gold:#f4c542;--bg:#f3f7f4;--card:#fff;--text:#193328;--muted:#65766c;--line:#dfe8e1;--red:#a83333}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{background:linear-gradient(135deg,var(--green),var(--dark));color:white;padding:22px 17px 25px;border-radius:0 0 24px 24px}
+header h1{font-size:22px;margin:0 0 5px}header p{margin:0;color:#e0eee5;font-size:13px}
+.wrap{max-width:760px;margin:auto;padding:14px}
+.summary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:-9px}
+.stat,.panel,.task{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:14px;box-shadow:0 3px 10px #1231}
+.stat small{display:block;color:var(--muted);font-size:12px}.stat strong{font-size:22px;color:var(--green)}
+.panel{margin-top:12px}.panel h2{font-size:16px;margin:0 0 10px}
+.progress{height:10px;background:#e7eee8;border-radius:99px;overflow:hidden}.progress>div{height:100%;width:0;background:var(--green);transition:width .2s}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+button,input,select{font:inherit}button{border:0;border-radius:10px;padding:10px 12px;background:var(--green);color:white;font-weight:650;cursor:pointer}
+button.secondary{background:#e8f2eb;color:var(--green);border:1px solid #d4e5d9}button.gold{background:var(--gold);color:#332b0b}button.danger{background:#f8e8e8;color:var(--red)}
+.task{margin-top:10px;padding:13px}.tasktop{display:flex;align-items:flex-start;gap:10px}.num{width:30px;height:30px;flex:0 0 30px;border-radius:9px;background:#e8f2eb;color:var(--green);display:grid;place-items:center;font-weight:800}
+.task h3{font-size:15px;margin:1px 0 4px}.sub{font-size:12px;color:var(--muted)}.badge{margin-left:auto;white-space:nowrap;font-size:11px;border-radius:99px;padding:5px 8px;background:#eef2ef;color:#506156}
+.task.done{border-color:#a4d2b2;background:#fbfffc}.task.done .badge{background:#dff3e5;color:#176b45}
+.controls{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.controls button{padding:8px 11px;font-size:13px}
+input[type=time],input[type=number],input[type=text],select{padding:9px;border:1px solid var(--line);border-radius:9px;background:white;color:var(--text);max-width:100%}
+.settingsrow{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--line)}.settingsrow:last-child{border:0}
+.settingsrow label{font-size:13px;flex:1;min-width:150px}
+.muted{font-size:12px;color:var(--muted);line-height:1.5}.small{font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:left;border-bottom:1px solid var(--line);padding:8px 5px}th{color:var(--muted)}
+footer{text-align:center;padding:20px;color:var(--muted);font-size:11px}
+.hidden{display:none!important}
+@media(min-width:600px){.tasklist{display:grid;grid-template-columns:1fr 1fr;gap:10px}.task{margin-top:0}.summary{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Efisiensi Waktu Pribadi</h1>
+  <p>Dashboard ibadah & murajaah harian</p>
+  <p id="today" style="margin-top:10px;font-weight:650"></p>
+</header>
+<main class="wrap">
+  <section class="summary">
+    <div class="stat"><small>Pencapaian hari ini</small><strong id="percent">0%</strong></div>
+    <div class="stat"><small>Kegiatan selesai</small><strong id="completed">0/14</strong></div>
+    <div class="stat"><small>Total durasi hari ini</small><strong id="totalDuration">0 mnt</strong></div>
+  </section>
+  <section class="panel">
+    <h2>Progres harian</h2><div class="progress"><div id="bar"></div></div>
+    <div class="toolbar">
+      <button id="notifyBtn" class="gold">Aktifkan notifikasi</button>
+      <button id="exportBtn" class="secondary">Ekspor riwayat CSV</button>
+      <button id="resetBtn" class="danger">Reset progres hari ini</button>
+    </div>
+    <p class="muted">Data disimpan di browser HP ini. Ekspor CSV secara berkala sebagai cadangan. Pengingat web memerlukan izin notifikasi dan dukungan browser; alarm saat browser ditutup tidak dijamin.</p>
+  </section>
+  <section class="panel">
+    <h2>14 kegiatan harian</h2>
+    <div id="tasks" class="tasklist"></div>
+  </section>
+  <section class="panel">
+    <h2>Rekap 7 hari terakhir</h2>
+    <div id="weekly"></div>
+  </section>
+  <section class="panel">
+    <h2>Pengaturan pengingat</h2>
+    <p class="muted">Atur jam untuk setiap kegiatan. Browser perlu mengizinkan notifikasi. Pengingat hanya dapat berjalan sesuai kemampuan browser/OS dan halaman yang diizinkan berjalan.</p>
+    <div id="reminders"></div>
+    <div class="toolbar"><button id="saveReminders">Simpan jadwal</button><button id="testReminder" class="secondary">Uji notifikasi</button></div>
+  </section>
+  <footer>Efisiensi Waktu Pribadi · versi web lokal</footer>
+</main>
+<script>
+const activities=[
+ {name:"Qiraah Al-Qur'an",target:3,unit:"juz",counter:true},
+ {name:"Tikrar 1 halaman",target:20,unit:"kali",counter:true},
+ {name:"Tikrar per ayat dalam 1 halaman",target:20,unit:"kali",counter:true},
+ {name:"Sholat malam",target:1,unit:"selesai"},
+ {name:"Qobliyah Subuh",target:1,unit:"selesai"},
+ {name:"Dzikir pagi",target:1,unit:"selesai"},
+ {name:"Sholat Dhuha",target:1,unit:"selesai"},
+ {name:"Qobliyah Dzuhur",target:1,unit:"selesai"},
+ {name:"Ba'diyah Dzuhur",target:1,unit:"selesai"},
+ {name:"Qobliyah Ashar",target:1,unit:"selesai"},
+ {name:"Dzikir sore",target:1,unit:"selesai"},
+ {name:"Ba'diyah Maghrib",target:1,unit:"selesai"},
+ {name:"Qobliyah Isya",target:1,unit:"selesai"},
+ {name:"Ba'diyah Isya",target:1,unit:"selesai"}
+];
+const $=id=>document.getElementById(id);
+const dateKey=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+const load=(k,def)=>{try{return JSON.parse(localStorage.getItem(k))??def}catch{return def}};
+let day=dateKey(), data=load('ewp_days',{}), reminders=load('ewp_reminders',{});
+function dayData(k=day){if(!data[k])data[k]={items:activities.map(()=>({count:0,done:false,seconds:0,runningSince:null,startedAt:null}))};while(data[k].items.length<activities.length)data[k].items.push({count:0,done:false,seconds:0,runningSince:null,startedAt:null});return data[k]}
+function save(){localStorage.setItem('ewp_days',JSON.stringify(data));localStorage.setItem('ewp_reminders',JSON.stringify(reminders))}
+function fmtDuration(s){let m=Math.floor(s/60),h=Math.floor(m/60);m%=60;return h?`${h} j ${m} mnt`:`${m} mnt`}
+function getSeconds(item){return (item.seconds||0)+(item.runningSince?Math.max(0,Math.floor((Date.now()-item.runningSince)/1000)):0)}
+function render(){
+ const d=dayData();$('today').textContent=new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+ let complete=d.items.filter((it,i)=>it.done||(activities[i].counter&&it.count>=activities[i].target)).length;
+ $('percent').textContent=Math.round(complete/activities.length*100)+'%';$('completed').textContent=`${complete}/${activities.length}`;$('bar').style.width=(complete/activities.length*100)+'%';
+ $('totalDuration').textContent=fmtDuration(d.items.reduce((a,it)=>a+getSeconds(it),0));
+ $('tasks').innerHTML='';
+ activities.forEach((a,i)=>{
+  const it=d.items[i], done=it.done||(a.counter&&it.count>=a.target);
+  const card=document.createElement('article');card.className='task'+(done?' done':'');
+  const countText=a.counter?`${Math.min(it.count,a.target)}/${a.target} ${a.unit}`:(done?'Selesai':'Belum selesai');
+  card.innerHTML=`<div class="tasktop"><div class="num">${i+1}</div><div style="flex:1;min-width:0"><h3>${a.name}</h3><div class="sub">Target: ${a.counter?a.target+' '+a.unit:'selesai'} · Durasi: ${fmtDuration(getSeconds(it))}</div></div><span class="badge">${done?'Tercapai':'Progres'}</span></div><div style="margin-top:9px;font-weight:750;color:var(--green)">${countText}</div><div class="controls">${a.counter?`<button data-act="minus" data-i="${i}" class="secondary">−1</button><button data-act="plus" data-i="${i}">+1</button>`:`<button data-act="toggle" data-i="${i}" class="${done?'secondary':'gold'}">${done?'Batalkan selesai':'Tandai selesai ✓'}</button>`}<button data-act="start" data-i="${i}" class="secondary">${it.runningSince?'Sedang berjalan…':'Mulai durasi'}</button><button data-act="stop" data-i="${i}" class="secondary">Selesai durasi</button></div>`;
+  $('tasks').appendChild(card);
+ });
+ renderWeekly();renderReminders();
+}
+function renderWeekly(){
+ let html='<table><thead><tr><th>Tanggal</th><th>Selesai</th><th>Durasi</th></tr></thead><tbody>';
+ for(let n=0;n<7;n++){let d=new Date();d.setDate(d.getDate()-n);let k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;let rec=data[k];let c=rec?rec.items.filter((it,i)=>it.done||(activities[i].counter&&it.count>=activities[i].target)).length:0;let sec=rec?rec.items.reduce((a,it)=>a+(it.seconds||0),0):0;html+=`<tr><td>${d.toLocaleDateString('id-ID',{day:'2-digit',month:'short'})}</td><td>${c}/14 (${Math.round(c/14*100)}%)</td><td>${fmtDuration(sec)}</td></tr>`}
+ html+='</tbody></table>';$('weekly').innerHTML=html;
+}
+function renderReminders(){
+ $('reminders').innerHTML='';
+ activities.forEach((a,i)=>{let row=document.createElement('div');row.className='settingsrow';row.innerHTML=`<label for="r${i}">${i+1}. ${a.name}</label><input id="r${i}" type="time" value="${reminders[i]||''}" aria-label="Jam pengingat ${a.name}">`; $('reminders').appendChild(row)});
+}
+$('tasks').addEventListener('click',e=>{
+ const b=e.target.closest('button[data-act]');if(!b)return;let i=+b.dataset.i,a=activities[i],it=dayData().items[i],act=b.dataset.act;
+ if(act==='plus')it.count=Math.min(a.target,it.count+1);
+ if(act==='minus')it.count=Math.max(0,it.count-1);
+ if(act==='toggle')it.done=!it.done;
+ if(act==='start'&&!it.runningSince){it.runningSince=Date.now();it.startedAt=Date.now()}
+ if(act==='stop'&&it.runningSince){it.seconds=(it.seconds||0)+Math.floor((Date.now()-it.runningSince)/1000);it.runningSince=null;it.startedAt=null}
+ save();render();
+});
+$('saveReminders').onclick=()=>{activities.forEach((a,i)=>{let v=$('r'+i).value;if(v)reminders[i]=v;else delete reminders[i]});save();alert('Jadwal pengingat disimpan di HP ini. Agar notifikasi lebih dapat diandalkan, izinkan notifikasi browser dan jangan batasi aktivitas browser.');};
+$('notifyBtn').onclick=async()=>{if(!('Notification'in window)){alert('Browser ini tidak mendukung notifikasi web.');return}let p=await Notification.requestPermission();alert(p==='granted'?'Izin notifikasi aktif. Catatan: notifikasi terjadwal saat browser ditutup tidak dijamin.':'Izin notifikasi belum diaktifkan. Periksa pengaturan situs di browser.');};
+$('testReminder').onclick=()=>{if(!('Notification'in window)||Notification.permission!=='granted'){alert('Aktifkan notifikasi terlebih dahulu.');return}new Notification('Efisiensi Waktu Pribadi',{body:'Ini adalah uji notifikasi. Pengingat saat browser ditutup tidak dijamin.'})};
+$('resetBtn').onclick=()=>{if(confirm('Reset progres hari ini? Riwayat sebelumnya tetap tersimpan.')){data[day]={items:activities.map(()=>({count:0,done:false,seconds:0,runningSince:null,startedAt:null}))};save();render()}};
+$('exportBtn').onclick=()=>{let rows=[['Tanggal','Kegiatan','Progres','Target','Durasi detik','Selesai']];Object.keys(data).sort().forEach(k=>data[k].items.forEach((it,i)=>rows.push([k,activities[i].name,it.count??(it.done?1:0),activities[i].target,it.seconds||0,it.done||(activities[i].counter&&it.count>=activities[i].target)?'Ya':'Tidak'])));let csv=rows.map(r=>r.map(x=>'"'+String(x).replaceAll('"','""')+'"').join(',')).join('\r\n');let blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='rekap-efisiensi-waktu.csv';a.click();URL.revokeObjectURL(url)};
+if('serviceWorker'in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
+setInterval(()=>{let nowKey=dateKey();if(nowKey!==day){day=nowKey;render()}else{const d=dayData();let running=d.items.some(it=>it.runningSince);if(running)render();checkReminders()}},15000);
+let fired={};
+function checkReminders(){const now=new Date(),hhmm=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0'),key=dateKey()+hhmm;if(fired[key])return;let matches=Object.entries(reminders).filter(([i,t])=>t===hhmm);if(matches.length&&'Notification'in window&&Notification.permission==='granted'){matches.forEach(([i])=>new Notification('Pengingat kegiatan',{body:activities[+i].name}));fired[key]=true}}
+dayData();render();
+</script>
+</body>
+</html>
